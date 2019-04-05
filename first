@@ -1,0 +1,8 @@
+1.	Pytorch的基本概念：
+    PyTorch是使用GPU和CPU优化的深度学习张量库。早先的版本基于torch，当前的版本基于caffe，由facebook支持开发。
+为什么选择pytroch？支持GPU；动态神经网络；Python 优先；命令式体验；轻松扩展。
+2.	开发环境 
+   python3.7+anaconda5.3，cuda10.0，pycharm community百度搜索根据自己电脑配置下载相应的版本安装，cuda安装出现报错，参考https://blog.csdn.net/bingo_6/article/details/80114440和https://blog.csdn.net/zzpong/article/details/80282814 
+3.Pytorch安装
+在官网https://pytorch.org/上根据自己的系统、环境和cuda版本 按照指示安装
+
