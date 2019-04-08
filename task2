@@ -1,0 +1,91 @@
+#numpy实现梯度下降法
+import numpy as np
+
+#读入数据
+x_data = np.array([3.3, 4.4, 5.5, 6.71, 6.93, 4.168], dtype=np.float32)
+
+y_data = np.array([1.7, 2.76, 2.09, 3.19, 1.694, 1.573], dtype=np.float32)
+
+epochs=10 #训练次数
+lr=0.1    #学习率
+w=0       #初始化权重
+b=0
+cost=[]
+for epoch in range(epochs):
+    #计算梯度
+    yhat=x_data*w+b
+    loss=np.average((yhat-y_data)**2)
+    cost.append(loss)
+    dw=-2*(y_data-yhat)@x_data.T/(x_data.shape[0])
+    #参数更新
+    w=w-lr*dw
+print(w)
+
+#pytorch实现梯度下降,线性回归
+import torch
+from torch.autograd import Variable
+x_train = np.array([[3.3], [4.4], [5.5], [6.71], [6.93], [4.168],
+                    [9.779], [6.182], [7.59], [2.167], [7.042],
+                    [10.791], [5.313], [7.997], [3.1]], dtype=np.float32)
+y_train = np.array([[1.7], [2.76], [2.09], [3.19], [1.694], [1.573],
+                    [3.366], [2.596], [2.53], [1.221], [2.827],
+                    [3.465], [1.65], [2.904], [1.3]], dtype=np.float32)
+x_train=Variable(torch.Tensor(x_train))
+y_train=Variable(torch.Tensor(y_train))
+w=Variable(torch.randn(1),requires_grad=True)
+# 初始化b
+b = Variable(torch.zeros(1), requires_grad=True)
+learning_rate=0.1
+epochs=20
+for epoch in range(epochs):
+    yhat = w*x_train+b
+    # 归零梯度
+    loss=torch.mean((yhat-y_train)**2)
+    cost.append(loss.data.numpy())
+    loss.backward()
+    w.data = w.data - 1e-2*w.grad.data
+    b.data = b.data - 1e-2*b.grad.data
+    w.grad.data.zero_()
+    b.grad.data.zero_()
+    print('epoch: {}, loss: {}'.format(epoch, loss.data))
+    
+#pytorch神经网络
+# -*- coding: utf-8 -*-
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.autograd import Variable
+x = np.array([[1.3],[2.4],[3.1],[4.32],[5.13],[6.15],[7.25],[8.92],[8.92],[3.12],[4.32],[8.52]], dtype=np.float32)
+y = np.array([[2.3],[1.13],[5.4],[6.1],[6.2],[6.85],[7.03],[8.18],[7.25],[6.82],[1.75],[6.2]], dtype=np.float32)
+x_train = torch.from_numpy(x)
+y_train = torch.from_numpy(y)
+class LinearRegression(nn.Module):
+    def __init__(self):
+        super(LinearRegression, self).__init__()
+        self.linear = nn.Linear(1, 1)  # input and output is 1 dimension
+
+    def forward(self, x):
+        out = self.linear(x)
+        return out
+model = LinearRegression()
+criterion = nn.MSELoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
+num_epochs = 1000
+for epoch in range(num_epochs):
+    inputs = Variable(x_train)
+    target = Variable(y_train)
+
+    # forward
+    out = model(inputs) # 前向传播
+    loss = criterion(out, target) # 计算loss
+    # backward
+    optimizer.zero_grad() # 梯度归零
+    loss.backward() # 方向传播
+    optimizer.step() # 更新参数
+
+    if (epoch+1) % 20 == 0:
+        print('Epoch[{}/{}], loss: {:.6f}'.format(epoch+1,num_epochs,loss.data))
+model.eval()
+predict = model(Variable(x_train))
+predict = predict.data.numpy()
