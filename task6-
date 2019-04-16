@@ -1,0 +1,98 @@
+                                                         神经网络优化器
+       神经网络优化器，主要是为了优化我们的神经网络，使他在我们的训练过程中快起来，节省神经网络训练的时间。在pytorch中提供了torch.optim方法优化我们的
+    神经网络。torch.optim是实现各种优化算法的包，最常用的方法都已经支持，接口很常规，所以以后也可以很容易地集成更复杂的方法。
+       要使用torch.optim，您必须构造一个optimizer对象。这个对象能保存当前的参数状态并且基于计算梯度更新参数。要构造一个Optimizer，
+    你必须给它一个包含参数（必须都是Variable对象）进行优化。然后，您可以指定optimizer的参 数选项，比如学习率，权重衰减等。
+    如：
+    optimizer = optim.SGD(model.parameters(), lr = 0.01, momentum=0.9)
+    optimizer = optim.Adam([var1, var2], lr = 0.0001)
+         Stochastic Gradient Descent (SGD) SGD是最基础的优化方法，普通的训练方法, 需要重复不断的把整套数据放入神经网络NN中训练, 
+      这样消耗的计算资源会很大.当我们使用SGD会把数据拆分后再分批不断放入 NN 中计算.每次使用批数据, 虽然不能反映整体数据的情况, 
+      不过却很大程度上加速了 NN 的训练过程, 而且也不会丢失太多准确率.
+      
+          momentum算法借用了物理中的动量概念，它模拟的是物体运动时的惯性，即更新的时候在一定程度上保留之前更新的方向，
+      同时利用当前batch的梯度微调最终的更新方向。这样一来，可以在一定程度上增加稳定性，从而学习地更快，并且还有一定摆脱局部最优的能力：
+      Momentum算法会观察历史梯度若当前梯度的方向与历史梯度一致（表明当前样本不太可能为异常点），则会增强这个方向的梯度，若当前梯度与历史梯方向不一致
+      则梯度会衰减。**一种形象的解释是：**我们把一个球推下山，球在下坡时积聚动量，在途中变得越来越快，γ可视为空气阻力，若球的方向发生变化，则动量会衰减。
+     
+        上述方法中，对于每一个参数的训练都使用了相同的学习率α。Adagrad算法能够在训练中自动的对learning rate进行调整，对于出现频率较低参数采用较大的α更新；
+     相反，对于出现频率较高的参数采用较小的α更新。因此，Adagrad非常适合处理稀疏数据。
+     
+        RMSprop是Geoff Hinton提出的一种自适应学习率方法。Adagrad会累加之前所有的梯度平方，而RMSprop仅仅是计算对应的平均值，
+     因此可缓解Adagrad算法学习率下降较快的问题。
+        
+        Adam(Adaptive Moment Estimation)是另一种自适应学习率的方法。它利用梯度的一阶矩估计和二阶矩估计动态调整每个参数的学习率。
+     Adam的优点主要在于经过偏置校正后，每一次迭代学习率都有个确定范围，使得参数比较平稳
+
+import torch
+import torch.utils.data as Data
+import torch.nn.functional as F
+import matplotlib.pyplot as plt
+
+LR = 0.01
+BATCH_SIZE = 32
+EPOCH = 12
+
+# fake dataset
+x = torch.unsqueeze(torch.linspace(-1, 1, 1000), dim=1)
+y = x.pow(2) + 0.1*torch.normal(torch.zeros(*x.size()))
+
+# plot dataset
+plt.scatter(x.numpy(), y.numpy())
+plt.show()
+
+torch_dataset = Data.TensorDataset(x, y)
+loader = Data.DataLoader(dataset=torch_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=2,)
+
+LR = 0.01
+BATCH_SIZE = 32
+EPOCH = 12
+
+# 默认的 network 形式
+class Net(torch.nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.hidden = torch.nn.Linear(1, 20)   # hidden layer
+        self.predict = torch.nn.Linear(20, 1)   # output layer
+
+    def forward(self, x):
+        x = F.relu(self.hidden(x))      # activation function for hidden layer
+        x = self.predict(x)             # linear output
+        return x
+
+# 为每个优化器创建一个 net
+net_SGD         = Net()
+net_Momentum    = Net()
+net_RMSprop     = Net()
+net_Adam        = Net()
+nets = [net_SGD, net_Momentum, net_RMSprop, net_Adam]
+
+# different optimizers
+opt_SGD         = torch.optim.SGD(net_SGD.parameters(), lr=LR)
+opt_Momentum    = torch.optim.SGD(net_Momentum.parameters(), lr=LR, momentum=0.8)
+opt_RMSprop     = torch.optim.RMSprop(net_RMSprop.parameters(), lr=LR, alpha=0.9)
+opt_Adam        = torch.optim.Adam(net_Adam.parameters(), lr=LR, betas=(0.9, 0.99))
+optimizers = [opt_SGD, opt_Momentum, opt_RMSprop, opt_Adam]
+
+loss_func = torch.nn.MSELoss()
+losses_his = [[], [], [], []]   # 记录 training 时不同神经网络的 loss
+
+for epoch in range(EPOCH):
+    print('Epoch: ', epoch)
+    for step, (b_x, b_y) in enumerate(loader):          # for each training step
+        for net, opt, l_his in zip(nets, optimizers, losses_his):
+            output = net(b_x)              # get output for every net
+            loss = loss_func(output, b_y)  # compute loss for every net
+            opt.zero_grad()                # clear gradients for next train
+            loss.backward()                # backpropagation, compute gradients
+            opt.step()                     # apply gradients
+            l_his.append(loss.data.numpy())     # loss recoder
+
+    labels = ['SGD', 'Momentum', 'RMSprop', 'Adam']
+    for i, l_his in enumerate(losses_his):
+        plt.plot(l_his, label=labels[i])
+    plt.legend(loc='best')
+    plt.xlabel('Steps')
+    plt.ylabel('Loss')
+    plt.ylim((0, 0.2))
+    plt.show()
